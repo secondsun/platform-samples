@@ -21,6 +21,9 @@ import android.content.Intent
 import android.content.Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
 import android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.Build
 import android.util.Log
 import androidx.compose.ui.unit.DpSize
@@ -42,6 +45,7 @@ import coil.memory.MemoryCache
 import coil.request.ErrorResult
 import coil.request.ImageRequest
 import com.example.platform.ui.appwidgets.glance.toPx
+import java.io.File
 import java.util.concurrent.TimeUnit
 import kotlin.math.roundToInt
 
@@ -52,6 +56,21 @@ class ImageWorker(
 ) : CoroutineWorker(context, workerParameters) {
 
     companion object {
+        fun uri(context: Context, filename: String): Uri {
+            val packageName = context.packageName
+            return Uri.parse("content://$packageName/$filename")
+        }
+
+        fun saveAsWidgetPNG(context: Context, fileIn:File): Uri {
+            val file =  File(context.cacheDir, "widget_image.png");
+            val bitmap = BitmapFactory.decodeStream(fileIn.inputStream())
+
+            file.outputStream().use { stream ->
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+            }
+
+            return uri(context, file.name)
+        }
 
         private val uniqueWorkName = ImageWorker::class.java.simpleName
 
@@ -160,37 +179,10 @@ class ImageWorker(
             val imageFile = snapshot.data.toFile()
 
             // Use the FileProvider to create a content URI
-            val contentUri = getUriForFile(
-                context,
-                "${applicationContext.packageName}.provider",
-                imageFile,
-            )
-
-            // Find the current launcher everytime to ensure it has read permissions
-            val intent = Intent(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_HOME) }
-            val resolveInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                context.packageManager.resolveActivity(
-                    intent,
-                    PackageManager.ResolveInfoFlags.of(PackageManager.MATCH_DEFAULT_ONLY.toLong()),
-                )
-            } else {
-                @Suppress("DEPRECATION")
-                context.packageManager.resolveActivity(
-                    intent,
-                    PackageManager.MATCH_DEFAULT_ONLY,
-                )
-            }
-            val launcherName = resolveInfo?.activityInfo?.packageName
-            if (launcherName != null) {
-                context.grantUriPermission(
-                    launcherName,
-                    contentUri,
-                    FLAG_GRANT_READ_URI_PERMISSION or FLAG_GRANT_PERSISTABLE_URI_PERMISSION,
-                )
-            }
+            val uri = saveAsWidgetPNG(context, imageFile)
 
             // return the path
-            contentUri.toString()
+            uri.toString()
         }
         return requireNotNull(path) {
             "Couldn't find cached file"

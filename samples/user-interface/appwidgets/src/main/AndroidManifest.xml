@@ -126,12 +126,9 @@
 
         <provider
             android:name=".glance.image.ImageFileProvider"
-            android:authorities="${applicationId}.provider"
-            android:exported="false"
+            android:authorities="com.example.platform.app"
+            android:exported="true"
             android:grantUriPermissions="true">
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/image_paths" />
         </provider>
     </application>
 

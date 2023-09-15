@@ -16,6 +16,68 @@
 
 package com.example.platform.ui.appwidgets.glance.image
 
-import androidx.core.content.FileProvider
+import android.content.ContentProvider
+import android.content.ContentValues
+import android.content.Context
+import android.database.Cursor
+import android.net.Uri
+import android.os.CancellationSignal
+import android.os.ParcelFileDescriptor
+import android.util.Log
+import java.io.File
+import java.lang.IllegalStateException
 
-class ImageFileProvider : FileProvider()
+class ImageFileProvider : ContentProvider() {
+    companion object
+    {
+        val T:String = ImageFileProvider::class.simpleName.toString()
+    }
+
+    override fun onCreate(): Boolean {
+        return true;
+    }
+
+    override fun query(
+        uri: Uri,
+        projection: Array<out String>?,
+        selection: String?,
+        selectionArgs: Array<out String>?,
+        sortOrder: String?,
+    ): Cursor? {
+        throw IllegalStateException("Not Implemented")
+    }
+
+    override fun getType(uri: Uri): String? {
+        return "image/png"
+    }
+
+    override fun openFile(uri: Uri, mode: String): ParcelFileDescriptor? {
+        val context: Context = this.context ?: return null
+        val file =  File(context.cacheDir, "widget_image.png");
+
+        if (!file.exists()) {
+            Log.w(T, "File $file does not exist") // todo: remove logging?
+            return null
+        }
+        Log.v(T, "Opening file $file")
+        return ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+    }
+
+    override fun insert(uri: Uri, values: ContentValues?): Uri? {
+        throw IllegalStateException("Not Implemented")
+    }
+
+    override fun delete(uri: Uri, selection: String?, selectionArgs: Array<out String>?): Int {
+        throw IllegalStateException("Not Implemented")
+    }
+
+    override fun update(
+        uri: Uri,
+        values: ContentValues?,
+        selection: String?,
+        selectionArgs: Array<out String>?,
+    ): Int {
+        throw IllegalStateException("Not Implemented")
+    }
+
+}
