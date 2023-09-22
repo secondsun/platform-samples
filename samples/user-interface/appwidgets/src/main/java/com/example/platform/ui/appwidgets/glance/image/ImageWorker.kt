@@ -63,10 +63,12 @@ class ImageWorker(
 
         fun saveAsWidgetPNG(context: Context, fileIn:File): Uri {
             val file =  File(context.cacheDir, "widget_image.png");
-            val bitmap = BitmapFactory.decodeStream(fileIn.inputStream())
 
-            file.outputStream().use { stream ->
-                bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+            fileIn.inputStream().use {fileStream ->
+                val bitmap = BitmapFactory.decodeStream(fileStream)
+                file.outputStream().use { stream ->
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+                }
             }
 
             return uri(context, file.name)
@@ -149,6 +151,7 @@ class ImageWorker(
             }
         }
         ImageGlanceWidget().updateAll(context)
+        ImageRepository(context).loadImage()
     }
 
     /**

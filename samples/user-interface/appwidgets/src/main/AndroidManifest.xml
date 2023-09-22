@@ -124,12 +124,6 @@
                 android:resource="@xml/app_widget_image_glance" />
         </receiver>
 
-        <provider
-            android:name=".glance.image.ImageFileProvider"
-            android:authorities="com.example.platform.app"
-            android:exported="true"
-            android:grantUriPermissions="true">
-        </provider>
     </application>
 
 </manifest>

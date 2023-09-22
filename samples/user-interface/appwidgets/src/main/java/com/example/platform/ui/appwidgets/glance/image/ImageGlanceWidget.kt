@@ -21,7 +21,11 @@ import android.content.Intent
 import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -91,9 +95,17 @@ class ImageGlanceWidget : GlanceAppWidget() {
 
     @Composable
     fun Content() {
+
         val context = LocalContext.current
         val size = LocalSize.current
-        val imagePath = currentState(getImageKey(size))
+
+        val imageRepo = ImageRepository(context)
+        val image by imageRepo.image.collectAsState()
+
+        LaunchedEffect(Unit) {
+            imageRepo.loadImage()
+        }
+
         GlanceTheme {
             Box(
                 modifier = GlanceModifier
@@ -101,52 +113,57 @@ class ImageGlanceWidget : GlanceAppWidget() {
                     .appWidgetBackground()
                     .background(GlanceTheme.colors.background)
                     .appWidgetBackgroundCornerRadius(),
-                contentAlignment = if (imagePath == null) {
-                    Alignment.Center
-                } else {
-                    Alignment.BottomEnd
-                },
+                contentAlignment =
+                    when(image) {
+                        is ImageRepository.ImageInfo.Unavailable -> Alignment.Center
+                        else -> Alignment.BottomEnd
+                    },
             ) {
-                if (imagePath != null) {
-                    Image(
-                        provider = getImageProvider(imagePath),
-                        contentDescription = null,
-                        contentScale = ContentScale.FillBounds,
-                        modifier = GlanceModifier
-                            .fillMaxSize()
-                            .clickable(actionRunCallback<RefreshAction>()),
-                    )
-                    Text(
-                        text = "Source: ${currentState(sourceKey)}",
-                        style = TextStyle(
-                            fontSize = 12.sp,
-                            fontStyle = FontStyle.Italic,
-                            textAlign = TextAlign.End,
-                            textDecoration = TextDecoration.Underline,
-                        ),
-                        modifier = GlanceModifier
-                            .fillMaxWidth()
-                            .padding(8.dp)
-                            .background(GlanceTheme.colors.primary)
-                            .clickable(
-                                actionStartActivity(
-                                    Intent(
-                                        Intent.ACTION_VIEW,
-                                        Uri.parse(currentState(sourceUrlKey)),
+                when(val image = image) {
+                    is ImageRepository.ImageInfo.Available -> {
+                        Image(
+                            provider = ImageProvider(image.image),
+                            contentDescription = null,
+                            contentScale = ContentScale.FillBounds,
+                            modifier = GlanceModifier
+                                .fillMaxSize()
+                                .clickable(actionRunCallback<RefreshAction>()),
+                        )
+                        Text(
+                            text = "Source: ${currentState(sourceKey)}",
+                            style = TextStyle(
+                                fontSize = 12.sp,
+                                fontStyle = FontStyle.Italic,
+                                textAlign = TextAlign.End,
+                                textDecoration = TextDecoration.Underline,
+                            ),
+                            modifier = GlanceModifier
+                                .fillMaxWidth()
+                                .padding(8.dp)
+                                .background(GlanceTheme.colors.primary)
+                                .clickable(
+                                    actionStartActivity(
+                                        Intent(
+                                            Intent.ACTION_VIEW,
+                                            Uri.parse(currentState(sourceUrlKey)),
+                                        ),
                                     ),
                                 ),
-                            ),
-                    )
-                } else {
-                    CircularProgressIndicator()
+                        )
+                    }
 
-                    // Enqueue the worker after the composition is completed using the glanceId as
-                    // tag so we can cancel all jobs in case the widget instance is deleted
-                    val glanceId = LocalGlanceId.current
-                    SideEffect {
-                        ImageWorker.enqueue(context, size, glanceId)
+                    else -> {
+                        CircularProgressIndicator()
+
+                        // Enqueue the worker after the composition is completed using the glanceId as
+                        // tag so we can cancel all jobs in case the widget instance is deleted
+                        val glanceId = LocalGlanceId.current
+                        SideEffect {
+                            ImageWorker.enqueue(context, size, glanceId)
+                        }
                     }
                 }
+
             }
         }
     }
